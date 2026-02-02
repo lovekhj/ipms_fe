@@ -1,4 +1,4 @@
-# IPMS 프론트엔드 개발 일지 (1단계: 기본 환경 구성)
+# IPMS 프론트엔드 개발 일지 (3단계: API 주소 변경)
 
 이 문서는 IPMS 프로젝트의 프론트엔드(화면)를 만드는 과정을 초보자도 이해할 수 있도록 기록한 개발 일지입니다.
 
@@ -44,9 +44,23 @@ export default defineConfig({
       // '@' 라는 기호를 쓰면 무조건 'src' 폴더를 가리키도록 약속합니다.
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  server: {
+  server: {
+    // 6. 서버 연결을 위한 대리자(Proxy) 설정
+    proxy: {
+      '/api': { // '/api'로 시작하는 요청은
+        target: 'http://localhost:8080', // 무조건 이 주소(백엔드 서버)로 보냅니다.
+        changeOrigin: true, // 도메인이 달라도 요청을 허용하게 속여줍니다.
+        // rewrite: (path) => path.replace(/^\/api/, '') // (제거) 이제 /api를 지우지 않고 그대로 보냅니다.
+      }
+    }
   }
 })
 ```
+> [!NOTE]
+> 서버 주소가 `localhost:8080/api/prj/list`와 같이 변경되었으므로, 프론트엔드에서도 `/api`를 잘라내지 않고 그대로 보내도록 프록시 설정을 변경할 수 있습니다. (현재는 코드만 변경함)
+
 
 ### 3.2 `tsconfig.app.json` 수정
 TypeScript에게도 `@`가 `src` 폴더라는 것을 알려줘야 오류가 나지 않습니다.
@@ -77,52 +91,23 @@ TypeScript에게도 `@`가 `src` 폴더라는 것을 알려줘야 오류가 나�
 ### 4.2 전체 틀 조립하기 (DefaultLayout.vue)
 위에서 만든 부품들을 모아서 하나의 화면 틀을 `src/layouts/DefaultLayout.vue`에 만들었습니다.
 
-```html
-<template>
-  <div class="layout-container">
-    <!-- 1. 헤더를 맨 위에 둡니다 -->
-    <TheHeader />
-    
-    <div class="main-container">
-      <!-- 2. 왼쪽에 메뉴를 둡니다 -->
-      <TheMenu />
-      
-      <!-- 3. 나머지 공간에 실제 작업 화면(Page)이 들어갑니다 -->
-      <main class="content-area">
-        <!-- RouterView는 현재 주소에 맞는 화면을 갈아끼워주는 액자입니다 -->
-        <RouterView />
-      </main>
-    </div>
-    
-    <!-- 4. 맨 아래에 푸터를 둡니다 -->
-    <TheFooter />
-  </div>
-</template>
-```
+## 5. 데이터 준비하기 (Data & API)
 
-## 5. 길 안내 설정하기 (Router)
-`src/router/index.ts` 파일에서 "어떤 주소로 들어오면 어떤 화면을 보여줄지" 정했습니다.
+### 5.1 데이터 모양 정의하기 (Types)
+서버에서 어떤 모양의 데이터를 줄지 미리 약속하는 문서를 만들었습니다.
+`src/types/project.d.ts` 파일에 `PrjDto`라는 이름으로 정의했습니다.
 
-```typescript
-const router = createRouter({
-  // ... 설정 생략 ...
-  routes: [
-    {
-      path: '/', // 홈페이지(루트)로 들어오면
-      component: DefaultLayout, // 전체 틀(레이아웃)을 먼저 보여주고
-      children: [
-        {
-          path: 'project/list', // '/project/list' 주소라면
-          name: 'ProjectList',  
-          component: ProjectList, // 프로젝트 리스트 화면을 그 틀 안에 넣어줍니다.
-        }
-      ]
-    }
-  ]
-});
-```
+### 5.2 서버와 통신하기 (API)
+`src/api/project.ts` 파일을 만들어서, 실제 서버에 데이터를 요청하는 기능을 넣었습니다.
+`getPrjList` 함수를 호출하면, 진짜 서버(`localhost:8080/api/prj/list`)에 가서 데이터를 받아옵니다.
+
+## 6. 프로젝트 리스트 화면 만들기 (View)
+`src/views/project/ProjectList.vue` 파일에 실제 화면을 구현했습니다.
+- 검색 버튼을 누르면 `getPrjList` 함수를 실행합니다.
+- 받아온 데이터를 `<table>` 태그를 이용해 표로 보여줍니다.
+- 데이터가 없을 때는 "조회된 데이터가 없습니다"라고 친절하게 알려줍니다.
 
 ---
 
-여기까지가 프로젝트를 시작하기 위한 **기초 공사** 단계였습니다.
-이제 이 튼튼한 기반 위에서 본격적으로 "프로젝트 리스트" 기능을 만들 것입니다.
+이제 사용자가 조회 버튼을 누르면 -> 프론트엔드가 백엔드 서버에 요청하고 -> 받아온 데이터를 화면에 표로 그려줍니다.
+이것으로 기본적인 **프로젝트 리스트 조회** 기능이 완성되었습니다!
