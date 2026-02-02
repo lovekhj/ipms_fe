@@ -32,6 +32,11 @@ const handleSearch = async () => {
     isLoading.value = false; // 로딩 끝
   }
 };
+// 3. 날짜 형식을 20240101 -> 2024-01-01 로 바꿔주는 함수입니다.
+const formatDate = (date: string) => {
+  if (!date || date.length !== 8) return date; // 데이터가 없거나 8자리가 아니면 그대로 보여줍니다.
+  return `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`;
+};
 </script>
 
 <template>
@@ -63,6 +68,7 @@ const handleSearch = async () => {
       <table class="data-table">
         <thead>
           <tr>
+            <th>No</th>
             <th>구분</th>
             <th>프로젝트명</th>
             <th>주관사</th>
@@ -88,13 +94,14 @@ const handleSearch = async () => {
           
           <!-- 데이터가 있을 때 반복해서 그립니다 (v-for) -->
           <tr v-else v-for="prj in projectList" :key="prj.prjId">
-            <td>{{ prj.prjGbn }}</td>
+            <td>{{ prj.rowNum }}</td>
+            <td>{{ prj.prjGbnNm }}</td>
             <td class="text-left">{{ prj.prjNm }}</td>
-            <td>{{ prj.bizPrtnr }}</td>
-            <td>{{ prj.prjStrDt }}</td>
-            <td>{{ prj.prjEndDt }}</td>
-            <td>{{ prj.prjStsCd }}</td>
-            <td>{{ prj.officeLoc }}</td>
+            <td>{{ prj.bizPrtnrNm }}</td>
+            <td>{{ formatDate(prj.prjStrDt) }}</td>
+            <td>{{ formatDate(prj.prjEndDt) }}</td>
+            <td>{{ prj.prjStsNm }}</td>
+            <td class="text-left">{{ prj.officeLocNm }}</td>
           </tr>
         </tbody>
       </table>

@@ -7,13 +7,18 @@
 */
 
 export interface PrjDto {
+    rowNum: string;      // 순번 (추가)
     prjId: string;       // 프로젝트 ID
     prjNm: string;       // 프로젝트명
     prjGbn: string;      // 프로젝트 구분
+    prjGbnNm: string;    // 프로젝트 구분명 (추가)
     prjStrDt: string;    // 시작일
     prjEndDt: string;    // 종료일
     prjStsCd: string;    // 상태 코드
+    prjStsNm: string;    // 상태명 (추가)
     prjDesc: string;     // 프로젝트 설명
     officeLoc: string;   // 근무지 위치
+    officeLocNm: string; // 근무지 위치명 (추가)
     bizPrtnr: string;    // 주관사
+    bizPrtnrNm: string;  // 주관사명 (추가)
 }

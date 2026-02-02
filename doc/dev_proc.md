@@ -96,6 +96,18 @@ TypeScript에게도 `@`가 `src` 폴더라는 것을 알려줘야 오류가 나�
 ### 5.1 데이터 모양 정의하기 (Types)
 서버에서 어떤 모양의 데이터를 줄지 미리 약속하는 문서를 만들었습니다.
 `src/types/project.d.ts` 파일에 `PrjDto`라는 이름으로 정의했습니다.
+(최신 업데이트: 코드(`Cd`) 외에도 화면 표시를 위한 이름(`Nm`) 필드들이 추가되었습니다.)
+
+```typescript
+export interface PrjDto {
+  rowNum: string;      // 순번
+  // ... 기존 필드 ...
+  prjGbnNm: string;    // 프로젝트 구분명
+  prjStsNm: string;    // 상태명
+  officeLocNm: string; // 근무지 위치명
+  bizPrtnrNm: string;  // 주관사명
+}
+```
 
 ### 5.2 서버와 통신하기 (API)
 `src/api/project.ts` 파일을 만들어서, 실제 서버에 데이터를 요청하는 기능을 넣었습니다.
