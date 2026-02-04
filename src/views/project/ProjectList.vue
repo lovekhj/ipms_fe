@@ -6,14 +6,46 @@
     - 가져온 데이터를 표(Table) 형태로 보여줍니다.
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { getPrjList } from '@/api/project';
-import type { PrjDto } from '@/types/project';
+import { getCommCdList } from '@/api/common';
+import type { PrjDto, PrjReqDto } from '@/types/project';
+import type { CommCdDto } from '@/types/common';
 
 // 1. 화면에 보여줄 데이터 상태(State)를 만듭니다.
 const projectList = ref<PrjDto[]>([]); // 프로젝트 목록 (처음엔 비어있음)
 const isLoading = ref(false); // 로딩 중인지 여부
 const errorMessage = ref(''); // 에러 메시지
+
+// 공통 코드 상태
+const prjGbnOptions = ref<CommCdDto[]>([]); // 프로젝트 구분 (PRJ_GBN)
+const prjStsOptions = ref<CommCdDto[]>([]); // 진행 상태 (PRJ_STS_CD)
+const officeLocOptions = ref<CommCdDto[]>([]); // 근무지 위치 (OFFICE_LOC)
+
+// 검색 조건 상태
+const searchParams = ref<PrjReqDto>({
+  prjGbn: '',
+  prjNm: '',
+  prjStrDt: '',
+  prjEndDt: '',
+  prjStsCd: '',
+  officeLoc: '',
+  bizPrtnr: ''
+});
+
+// 화면이 열릴 때 실행되는 함수
+onMounted(async () => {
+  // 공통 코드 가져오기
+  const result: any = await getCommCdList('PRJ_GBN,PRJ_STS_CD,OFFICE_LOC');
+  console.log('화면 공통코드 수신:', result);
+
+  // 혹시 데이터가 data 속성 안에 한번 더 감싸져 있다면 꺼내줍니다.
+  const codes = result.data || result;
+
+  if (codes['PRJ_GBN']) prjGbnOptions.value = codes['PRJ_GBN'];
+  if (codes['PRJ_STS_CD']) prjStsOptions.value = codes['PRJ_STS_CD'];
+  if (codes['OFFICE_LOC']) officeLocOptions.value = codes['OFFICE_LOC'];
+});
 
 // 2. 조회 버튼을 눌렀을 때 실행할 함수입니다.
 const handleSearch = async () => {
@@ -22,8 +54,8 @@ const handleSearch = async () => {
   projectList.value = []; // 리스트 초기화
 
   try {
-    // API 함수를 호출해서 데이터를 가져옵니다.
-    const data = await getPrjList();
+    // API 함수를 호출해서 데이터를 가져옵니다. searchParams.value를 넘겨줍니다.
+    const data = await getPrjList(searchParams.value);
     projectList.value = data; // 가져온 데이터를 화면 변수에 넣어줍니다.
   } catch (error: any) {
     console.error('화면 에러:', error);
@@ -32,6 +64,20 @@ const handleSearch = async () => {
     isLoading.value = false; // 로딩 끝
   }
 };
+
+// 초기화 버튼 함수
+const handleReset = () => {
+  searchParams.value = {
+    prjGbn: '',
+    prjNm: '',
+    prjStrDt: '',
+    prjEndDt: '',
+    prjStsCd: '',
+    officeLoc: '',
+    bizPrtnr: ''
+  };
+};
+
 // 3. 날짜 형식을 20240101 -> 2024-01-01 로 바꿔주는 함수입니다.
 const formatDate = (date: string) => {
   if (!date || date.length !== 8) return date; // 데이터가 없거나 8자리가 아니면 그대로 보여줍니다.
@@ -45,22 +91,77 @@ const formatDate = (date: string) => {
     
     <!-- 검색 조건 및 버튼 영역 -->
     <div class="search-area">
-      <div class="search-form">
-        <label>프로젝트명</label>
-        <input type="text" placeholder="검색어 입력" />
-        
-        <label>구분</label>
-        <select>
-          <option value="">전체</option>
-          <option value="운영">운영</option>
-          <option value="개발">개발</option>
-        </select>
+      <div class="search-rows">
+        <!-- 첫 번째 줄: 구분, 프로젝트명 -->
+        <div class="search-row">
+          <div class="search-item">
+            <label>구분</label>
+            <select v-model="searchParams.prjGbn">
+              <option value="">전체</option>
+              <option v-for="opt in prjGbnOptions" :key="opt.cdVal" :value="opt.cdVal">
+                {{ opt.cdValNm }}
+              </option>
+            </select>
+          </div>
+          <div class="search-item">
+            <label>프로젝트명</label>
+            <input type="text" v-model="searchParams.prjNm" placeholder="검색어 입력" />
+          </div>
+        </div>
+
+        <!-- 두 번째 줄: 시작일, 종료일, 진행상태 -->
+        <div class="search-row">
+          <div class="search-item">
+            <label>시작일</label>
+            <!-- required 속성을 넣어줘야 :valid 선택자가 작동합니다 -->
+            <input type="date" v-model="searchParams.prjStrDt" required />
+          </div>
+          <div class="search-item">
+            <label>종료일</label>
+            <input type="date" v-model="searchParams.prjEndDt" required />
+          </div>
+          <div class="search-item">
+            <label>진행상태</label>
+            <select v-model="searchParams.prjStsCd">
+              <option value="">전체</option>
+              <option v-for="opt in prjStsOptions" :key="opt.cdVal" :value="opt.cdVal">
+                {{ opt.cdValNm }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 세 번째 줄: 위치, 발주처 -->
+        <div class="search-row">
+          <div class="search-item">
+            <label>위치</label>
+            <select v-model="searchParams.officeLoc">
+              <option value="">전체</option>
+              <option v-for="opt in officeLocOptions" :key="opt.cdVal" :value="opt.cdVal">
+                {{ opt.cdValNm }}
+              </option>
+            </select>
+          </div>
+          <div class="search-item">
+            <label>발주처</label>
+            <select v-model="searchParams.bizPrtnr">
+              <option value="">전체</option>
+              <option value="skt">skt</option>
+              <option value="하이닉스">하이닉스</option>
+            </select>
+          </div>
+        </div>
       </div>
       
-      <!-- 조회 버튼: 클릭하면 handleSearch 함수가 실행됩니다 -->
-      <button class="btn-search" @click="handleSearch" :disabled="isLoading">
-        {{ isLoading ? '조회중...' : '조회' }}
-      </button>
+      <!-- 버튼 그룹 -->
+      <div class="btn-group">
+        <button class="btn-reset" @click="handleReset" :disabled="isLoading">
+          초기화
+        </button>
+        <button class="btn-search" @click="handleSearch" :disabled="isLoading">
+          {{ isLoading ? '조회중...' : '조회' }}
+        </button>
+      </div>
     </div>
     
     <!-- 데이터 그리드(표) 영역 -->
@@ -124,20 +225,61 @@ const formatDate = (date: string) => {
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end; /* 버튼을 아래로 정렬 */
 }
 
-.search-form {
+.search-rows {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
+  flex: 1; /* 남은 공간 차지 */
+  margin-right: 20px;
 }
 
-.search-form input,
-.search-form select {
+.search-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-item label {
+  font-weight: bold;
+  font-size: 14px;
+  color: #555;
+  min-width: 60px; /* 라벨 너비 고정 */
+}
+
+/* 날짜 입력 스타일 수정 */
+.search-item input[type="date"] {
+  /* 값이 없을 때(invalid) 글자색을 투명하게 해서 연도.월.일 숨김 */
+  color: transparent;
+  width: 130px; /* 너비 조금 확보 */
+}
+/* 포커스 되거나 값이 있을 때(valid) 글자색 복구 */
+.search-item input[type="date"]:focus,
+.search-item input[type="date"]:valid {
+  color: inherit;
+}
+
+.search-item input,
+.search-item select {
   padding: 5px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  height: 32px;
+}
+
+/* 버튼 그룹 */
+.btn-group {
+  display: flex;
+  gap: 8px;
 }
 
 /* 버튼 스타일 */
@@ -152,12 +294,27 @@ const formatDate = (date: string) => {
 }
 
 .btn-search:hover {
-  background-color: #0056b3; /* 마우스 올리면 좀 더 진하게 */
+  background-color: #0056b3;
 }
 
 .btn-search:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+/* 초기화 버튼 스타일 */
+.btn-reset {
+  background-color: #6c757d; /* 회색 */
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-reset:hover {
+  background-color: #5a6268;
 }
 
 /* 테이블 스타일 */
