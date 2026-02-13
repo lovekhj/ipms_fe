@@ -28,7 +28,6 @@ const menus = ref([
     title: '멤버',
     items: [
       { name: '멤버리스트', path: '/member/list' },
-      { name: '멤버관리', path: '/member/manage' },
     ]
   },
   {

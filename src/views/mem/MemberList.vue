@@ -7,10 +7,14 @@
 -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { getCommCdList } from '@/api/common';
 import { getMemList } from '@/api/member';
 import type { CommCdDto } from '@/types/common';
 import type { MemDto, MemReqDto } from '@/types/member';
+
+// 페이지 이동(router)을 사용하기 위한 객체입니다.
+const router = useRouter();
 
 // 1) 표에 출력할 실제 멤버 목록 데이터입니다. (처음에는 빈 배열)
 const memberList = ref<MemDto[]>([]);
@@ -30,6 +34,9 @@ const searchParams = ref<MemReqDto>({
 
 // 5) 공통 코드 MBR_TYPE 목록(구분 콤보박스 옵션)입니다.
 const memberTypeOptions = ref<CommCdDto[]>([]);
+
+// 6) 수정 버튼에서 사용할 "선택된 멤버" 상태입니다.
+const selectedMember = ref<MemDto | null>(null);
 
 // 화면이 열릴 때 한번 실행됩니다.
 onMounted(async () => {
@@ -58,6 +65,7 @@ const handleSearch = async () => {
   try {
     const data = await getMemList(searchParams.value);
     memberList.value = data;
+    selectedMember.value = null; // 새 조회를 하면 이전 선택값은 지웁니다.
   } catch (error: any) {
     console.error('멤버 화면 조회 에러:', error);
     errorMessage.value = `데이터 조회 실패: ${error?.message || '알 수 없는 에러'}`;
@@ -81,6 +89,7 @@ const handleReset = () => {
   };
   memberList.value = [];
   errorMessage.value = '';
+  selectedMember.value = null;
 };
 
 /**
@@ -128,6 +137,56 @@ const formatPhone = (phone?: string) => {
 const display = (...values: Array<string | number | undefined>) => {
   const found = values.find((v) => v !== undefined && v !== null && String(v).trim() !== '');
   return found !== undefined ? String(found) : '-';
+};
+
+/**
+ * 함수 이름: selectMember
+ * 설명: 목록의 한 줄을 클릭하면 그 멤버를 "선택 상태"로 저장합니다.
+ * 목적:
+ *   - 사용자가 수정 버튼을 눌렀을 때, 어떤 멤버를 수정할지 알기 위해 필요합니다.
+ */
+const selectMember = (member: MemDto) => {
+  selectedMember.value = member;
+};
+
+/**
+ * 함수 이름: goCreate
+ * 설명: 신규 버튼 클릭 시 멤버등록 화면으로 이동합니다.
+ * 신규 모드에서는 모든 입력칸이 활성화됩니다.
+ */
+const goCreate = () => {
+  router.push({
+    path: '/member/manage',
+    query: { mode: 'create' }
+  });
+};
+
+/**
+ * 함수 이름: goEdit
+ * 설명: 수정 버튼 클릭 시 멤버등록 화면으로 이동합니다.
+ * 수정 모드에서는 이름/주민번호를 비활성화 처리하기 위해 mode=edit로 보냅니다.
+ * 또한 화면에 미리 채울 값을 query로 함께 전달합니다.
+ */
+const goEdit = () => {
+  if (!selectedMember.value) return;
+
+  router.push({
+    path: '/member/manage',
+    query: {
+      mode: 'edit',
+      memId: display(selectedMember.value.memId, selectedMember.value.mbrId),
+      memNm: display(selectedMember.value.memNm, selectedMember.value.mbrNm),
+      mbrType: display(selectedMember.value.mbrType),
+      mbrTypeNm: display(selectedMember.value.mbrTypeNm),
+      birth: display(selectedMember.value.birth, selectedMember.value.birthDt, selectedMember.value.birthYmd),
+      cellPhoneNum: display(
+        selectedMember.value.cellPhoneNum,
+        selectedMember.value.hpNo,
+        selectedMember.value.mobileNo
+      ),
+      gnrlPhoneNum: display(selectedMember.value.gnrlPhoneNum || undefined, selectedMember.value.telNo)
+    }
+  });
 };
 </script>
 
@@ -206,7 +265,13 @@ const display = (...values: Array<string | number | undefined>) => {
                 {{ isLoading ? '데이터를 불러오는 중입니다...' : '조회된 데이터가 없습니다.' }}
               </td>
             </tr>
-            <tr v-else v-for="(item, idx) in memberList" :key="display(item.memId, item.mbrId, item.rowNum, idx + 1)">
+            <tr
+              v-else
+              v-for="(item, idx) in memberList"
+              :key="display(item.memId, item.mbrId, item.rowNum, idx + 1)"
+              :class="{ 'row-selected': selectedMember === item }"
+              @click="selectMember(item)"
+            >
               <td>{{ display(item.rowNum, idx + 1) }}</td>
               <td>{{ display(item.memId, item.mbrId) }}</td>
               <td class="text-left">{{ display(item.memNm, item.mbrNm) }}</td>
@@ -223,7 +288,14 @@ const display = (...values: Array<string | number | undefined>) => {
       </div>
 
       <!-- 캡처 화면 하단 페이징 자리 표시 -->
-      <div class="paging-area">&lt; 1.2.3 ... n &gt;</div>
+      <div class="paging-area">
+        <div class="paging-placeholder"></div>
+        <div class="paging-text">&lt; 1.2.3 ... n &gt;</div>
+        <div class="action-buttons">
+          <button class="btn-search" @click="goCreate">신규</button>
+          <button class="btn-search" :disabled="!selectedMember" @click="goEdit">수정</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -363,6 +435,10 @@ const display = (...values: Array<string | number | undefined>) => {
   background-color: #f8f9fa;
 }
 
+.row-selected {
+  background-color: #dfefff !important;
+}
+
 .text-left {
   text-align: left !important;
 }
@@ -382,8 +458,24 @@ const display = (...values: Array<string | number | undefined>) => {
   border-top: 1px solid #eee;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   font-size: 14px;
   color: #666;
+}
+
+.paging-placeholder {
+  width: 140px;
+}
+
+.paging-text {
+  flex: 1;
+  text-align: center;
+}
+
+.action-buttons {
+  width: 140px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

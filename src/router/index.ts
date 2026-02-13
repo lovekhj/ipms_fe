@@ -10,6 +10,7 @@ import { createRouter, createWebHistory } from 'vue-router'; // 뷰 라우터라
 import DefaultLayout from '@/layouts/DefaultLayout.vue'; // 기본 레이아웃 틀을 가져옵니다.
 import ProjectList from '@/views/project/ProjectList.vue'; // 프로젝트 리스트 화면을 가져옵니다.
 import MemberList from '@/views/mem/MemberList.vue'; // 멤버 리스트 화면을 가져옵니다.
+import MemberManage from '@/views/mem/MemberManage.vue'; // 멤버 등록/수정 화면을 가져옵니다.
 
 // 라우터(길 안내 도우미)를 만듭니다.
 const router = createRouter({
@@ -34,6 +35,11 @@ const router = createRouter({
           path: 'member/list', // 주소가 '/member/list' 라면
           name: 'MemberList',  // 이 길의 이름은 'MemberList' 입니다.
           component: MemberList, // MemberList.vue 화면을 틀 안에 끼워 보여줍니다.
+        },
+        {
+          path: 'member/manage', // 주소가 '/member/manage' 라면
+          name: 'MemberManage',  // 이 길의 이름은 'MemberManage' 입니다.
+          component: MemberManage, // MemberManage.vue 화면을 틀 안에 끼워 보여줍니다.
         },
         // 나중에 다른 화면(멤버 관리, 공통 코드 등)도 여기에 추가하면 됩니다.
 
